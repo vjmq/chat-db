@@ -2,6 +2,7 @@ import { mkdirSync } from 'fs'
 import { join } from 'path'
 import { EventEmitter } from 'events'
 import { ClientEventMap, AuthState } from '../../utils'
+import { log } from './utils'
 
 export type EmailProvider = 'gmail' | 'imap'
 
@@ -38,13 +39,24 @@ export function getClient(options: {
       if (!options.account.id || !options.account.address) {
         throw new Error('Email account is missing required fields')
       }
+      if (
+        options.account.provider !== 'gmail' &&
+        options.account.provider !== 'imap'
+      ) {
+        throw new Error(
+          `Unsupported email provider: ${options.account.provider}`,
+        )
+      }
 
       authState = 'authenticated'
+      log.client('authenticated', options.account.id)
       events.emit('authenticated')
+      log.client('ready', options.account.id)
       events.emit('ready')
       resolve()
     } catch (error) {
       authState = 'not_authenticated'
+      log.client('auth_failure', options.account.id, error)
       events.emit('auth_failure', error)
       reject(error)
     }
@@ -58,11 +70,20 @@ export function getClient(options: {
     return authState
   }
 
+  function disconnect() {
+    if (authState !== 'not_authenticated') {
+      authState = 'not_authenticated'
+      log.client('disconnected', options.account.id)
+      events.emit('disconnected', 'client stopped')
+    }
+  }
+
   return {
     client,
     ready,
     events,
     getAuthState,
     getIdentity,
+    disconnect,
   }
 }
