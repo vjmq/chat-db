@@ -175,6 +175,49 @@ level integer NULL
 subscription_until_time integer NULL
 
 
+em_account
+----------
+id text PK
+provider text
+address text
+session_dir text
+last_synced_at integer NULL
+
+
+em_user
+--------
+id integer PK
+address text unique
+display_name text NULL
+
+
+em_chat
+--------
+id integer PK
+account_id text FK >0- em_account.id
+thread_key text
+normalized_subject text NULL
+last_message_id integer NULL
+# unique(account_id, thread_key)
+
+
+em_message
+-----------
+id integer PK
+account_id text FK >0- em_account.id
+chat_id integer FK >0- em_chat.id
+api_id text
+timestamp integer
+from_user_id integer FK >0- em_user.id
+to_user_id integer NULL FK >0- em_user.id
+body text
+from_me boolean
+message_id_header text NULL
+in_reply_to text NULL
+references text NULL
+# unique(account_id, api_id)
+
+
 # zoom: 1.000
 # view: (-85, 362)
 # text-bg: #6495ed
@@ -192,3 +235,7 @@ subscription_until_time integer NULL
 # tg_user (883, 1294)
 # tg_chat (460, 1169)
 # tg_channel (457, 1598)
+# em_account (1114, 1700)
+# em_user (1520, 1700)
+# em_chat (1114, 2035)
+# em_message (1520, 2035)

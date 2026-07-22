@@ -2,7 +2,7 @@
 
 - [ ] implement events and getAuthState in email adapter
 - [ ] update the cli.ts in email folder, similar to whatsapp
-- [ ] define the tables in `erd.txt`
+- [x] define the tables in `erd.txt`
 - [ ] create the tables using `npm run db:plan`, and `npm run db:update`
 - [ ] implement the sync flow
 - [ ] support multiple inboxes (config is a list; one adapter instance per entry)
