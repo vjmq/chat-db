@@ -1,2 +1,3 @@
 src/proxy.ts
 migrations/*_auto-migrate.ts
+src\proxy.ts

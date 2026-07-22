@@ -172,6 +172,48 @@ export type TgChannel = {
   subscription_until_time: null | number
 }
 
+export type EmAccount = {
+  id?: null | string
+  provider: string
+  address: string
+  session_dir: string
+  last_synced_at: null | number
+}
+
+export type EmUser = {
+  id?: null | number
+  address: string
+  display_name: null | string
+}
+
+export type EmChat = {
+  id?: null | number
+  account_id: string
+  account?: EmAccount
+  thread_key: string
+  normalized_subject: null | string
+  last_message_id: null | number
+}
+
+export type EmMessage = {
+  id?: null | number
+  account_id: string
+  account?: EmAccount
+  chat_id: number
+  chat?: EmChat
+  api_id: string
+  timestamp: number
+  from_user_id: number
+  from_user?: EmUser
+  to_user_id: null | number
+  to_user?: EmUser
+  body: string
+  from_me: boolean
+  message_id_header: null | string
+  in_reply_to: null | string
+  references: null | string
+}
+
 export type DBProxy = {
   ws_user: WsUser[]
   ws_chat: WsChat[]
@@ -182,6 +224,10 @@ export type DBProxy = {
   tg_user: TgUser[]
   tg_chat: TgChat[]
   tg_channel: TgChannel[]
+  em_account: EmAccount[]
+  em_user: EmUser[]
+  em_chat: EmChat[]
+  em_message: EmMessage[]
 }
 
 export let proxy = proxySchema<DBProxy>({
@@ -223,6 +269,19 @@ export let proxy = proxySchema<DBProxy>({
     tg_channel: [
       /* foreign references */
       ['dialog', { field: 'dialog_id', table: 'tg_dialog' }],
+    ],
+    em_account: [],
+    em_user: [],
+    em_chat: [
+      /* foreign references */
+      ['account', { field: 'account_id', table: 'em_account' }],
+    ],
+    em_message: [
+      /* foreign references */
+      ['account', { field: 'account_id', table: 'em_account' }],
+      ['chat', { field: 'chat_id', table: 'em_chat' }],
+      ['from_user', { field: 'from_user_id', table: 'em_user' }],
+      ['to_user', { field: 'to_user_id', table: 'em_user' }],
     ],
   },
 })
