@@ -5,6 +5,8 @@ export let env = {
   TG_SESSION_DIR: '.tg_auth',
   TG_API_ID: NaN,
   TG_API_HASH: '',
+  EMAIL_SESSION_DIR: '.email_auth',
+  EMAIL_ACCOUNTS: '[]',
   PORT: 3000,
   API_KEY: 'uuid',
 }
