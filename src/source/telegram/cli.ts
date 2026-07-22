@@ -1,6 +1,7 @@
 import { env } from '../../env'
 import { attachClient } from '../../server'
 import { getClient } from './adapter'
+import { sync } from './sync'
 import { log } from './utils'
 
 export async function main() {
