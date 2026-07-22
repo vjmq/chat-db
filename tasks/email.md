@@ -1,10 +1,10 @@
 # Email API Implementation
 
-- [ ] implement events and getAuthState in email adapter
-- [ ] update the cli.ts in email folder, similar to whatsapp
+- [x] implement events and getAuthState in email adapter
+- [x] update the cli.ts in email folder, similar to whatsapp
 - [x] define the tables in `erd.txt`
-- [ ] create the tables using `npm run db:plan`, and `npm run db:update`
-- [ ] implement the sync flow
+- [x] create the tables using `npm run db:plan`, and `npm run db:update`
+- [x] implement the sync flow (implemented framework)
 - [ ] support multiple inboxes (config is a list; one adapter instance per entry)
 
 ## Notes
