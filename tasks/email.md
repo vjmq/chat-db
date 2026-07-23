@@ -35,9 +35,19 @@ Add an `em_*` block. Same conventions as `ws_*` / `tg_*`:
 
 ### Library choice
 
-Pick **one** provider for v1, not both:
+**IMAP + SMTP via `imapflow` + `mailparser`**. Outlook is on the roadmap and it speaks IMAP too, so one shared code path covers Gmail, Outlook, iCloud, Fastmail, and self-hosted.
 
-- **Gmail API** (`googleapis`) — OAuth2, rich metadata, no MIME parsing. Recommended.
-- **IMAP + SMTP** (`imapflow` + `mailparser`) — works with any provider (Outlook, Fastmail, self-hosted). Drop `nodemailer` and the Gmail OAuth code if you go this route.
+- No OAuth dance — use **app passwords** (Gmail under 2FA, Outlook.com too).
+- Thread pairing via `Message-ID` / `In-Reply-To` / `References` headers; `X-GM-THRID` for Gmail thread IDs.
+- Real-time is polling (IMAP `IDLE` is fragile). Polling every ~60s is fine for chat-DB sync.
+
+Install:
+
+```bash
+npm install imapflow mailparser
+npm install -D @types/mailparser
+```
+
+Skip `nodemailer` for v1 (read-only sync). Add it later if sending is needed.
 
 The `if (provider === 'gmail') … else …` branch lives in `adapter.ts`; the rest of the file doesn't need to care.
