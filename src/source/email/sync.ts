@@ -1,8 +1,9 @@
 import { find, seedRow } from 'better-sqlite3-proxy'
 import { proxy } from '../../proxy'
 import { db } from '../../db'
-import { EmailAccountConfig } from './adapter'
+import { EmailAccountConfig, EmailClientLike } from './adapter'
 import { log } from './utils'
+import { fetchMessages } from './fetch'
 
 export type EmailMessage = {
   api_id: string
@@ -147,4 +148,13 @@ export async function sync(
     syncMessage(account, message)
   }
   touch_account.run({ id: account.id, last_synced_at: Date.now() })
+}
+
+export async function syncClient(client: EmailClientLike) {
+  let account = client.account
+  let row = syncAccount(account)
+  let since = row.last_synced_at ? new Date(row.last_synced_at) : null
+  await sync(account, () =>
+    fetchMessages(client.imap, client.mailbox, account.address, since),
+  )
 }
