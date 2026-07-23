@@ -50,7 +50,7 @@ let insert_message = db.prepare(
 insert into em_message (
   account_id, chat_id, api_id, timestamp,
   from_user_id, to_user_id, body, from_me,
-  message_id_header, in_reply_to, references
+  message_id_header, in_reply_to, "references"
 )
 values (
   :account_id, :chat_id, :api_id, :timestamp,
@@ -66,7 +66,7 @@ on conflict(account_id, api_id) do update set
   from_me = excluded.from_me,
   message_id_header = excluded.message_id_header,
   in_reply_to = excluded.in_reply_to,
-  references = excluded.references
+  "references" = excluded."references"
 `,
 )
 
@@ -114,17 +114,19 @@ export let syncMessage = (
     : null
   let chat_id = getChatId(account_id, message.thread_key)
   let fields = {
-    account_id,
-    chat_id,
-    api_id: message.api_id,
-    timestamp: message.timestamp,
-    from_user_id,
-    to_user_id,
-    body: message.body,
-    from_me: message.from_me,
-    message_id_header: message.message_id_header || null,
-    in_reply_to: message.in_reply_to || null,
-    references: message.references || null,
+    account_id: String(account_id),
+    chat_id: Number(chat_id),
+    api_id: String(message.api_id),
+    timestamp: Number(message.timestamp),
+    from_user_id: Number(from_user_id),
+    to_user_id: to_user_id != null ? Number(to_user_id) : null,
+    body: String(message.body ?? ''),
+    from_me: message.from_me ? 1 : 0,
+    message_id_header: message.message_id_header
+      ? String(message.message_id_header)
+      : null,
+    in_reply_to: message.in_reply_to ? String(message.in_reply_to) : null,
+    references: message.references ? String(message.references) : null,
   }
   insert_message.run(fields)
   let row = find(proxy.em_message, { account_id, api_id: message.api_id })

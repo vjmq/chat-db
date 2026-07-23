@@ -148,7 +148,12 @@ export function getClient(options: {
   }
 
   return {
-    get client() {
+    get client(): EmailClientLike {
+      if (!client) {
+        throw new Error(
+          `Email client for ${options.account.id} is not ready yet`,
+        )
+      }
       return client
     },
     ready,
