@@ -5,7 +5,15 @@
 - [x] define the tables in `erd.txt`
 - [x] create the tables using `npm run db:plan`, and `npm run db:update`
 - [x] implement the sync flow (implemented framework)
-- [ ] support multiple inboxes (config is a list; one adapter instance per entry)
+- [x] support multiple inboxes (config is a list; one adapter instance per entry)
+  - [x] config: `EMAIL_ACCOUNTS` is a JSON array, per-entry `getClient({ account })`
+  - [x] parallel init via `Promise.allSettled` (one bad account doesn't block the others)
+  - [x] per-account session dir + per-account DB rows (`em_account.id` scopes `em_chat` / `em_message`)
+  - [x] per-account `last_synced_at` cursor
+  - [ ] kick off `syncClient` from `cli.ts:run` after `ready` (currently only the smoke test calls it)
+  - [ ] wire `email_cli.main()` into `src/cli.ts` so `npm start` runs it
+  - [ ] reconnect on `disconnected` event with backoff so a socket blip doesn't take an account offline until restart
+  - [ ] per-account try/catch around `syncClient` so one bad account doesn't kill the others
 
 ## Notes
 
@@ -48,6 +56,13 @@ npm install imapflow mailparser
 npm install -D @types/mailparser
 ```
 
-Skip `nodemailer` for v1 (read-only sync). Add it later if sending is needed.
+### Sending (later)
+
+When sending is needed, add `nodemailer` and use the same SMTP credentials already in the `gmail` / `imap` block (Gmail: `smtp.gmail.com:465` over TLS; Outlook: `smtp.office365.com:587` with STARTTLS). Wire it into `adapter.ts` as a thin `send(client, { to, subject, body })` that returns the IMAP `Message-ID` so replies can be paired.
+
+```bash
+npm install nodemailer
+npm install -D @types/nodemailer
+```
 
 The `if (provider === 'gmail') … else …` branch lives in `adapter.ts`; the rest of the file doesn't need to care.
