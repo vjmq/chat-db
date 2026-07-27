@@ -61,6 +61,20 @@ export type WsMessage = {
   links: null | string // json
   poll_options: null | string // json
   poll_votes: null | string // json
+  media_id: null | number
+  media?: Media
+}
+
+export type Media = {
+  id?: null | number
+  ws_message_id: null | number
+  ws_message?: WsMessage
+  source: string
+  filename: string
+  content_type: string
+  bytes: null | number
+  downloaded_at: null | number
+  download_error: null | string
 }
 
 export type WsGroup = {
@@ -218,6 +232,7 @@ export type DBProxy = {
   ws_user: WsUser[]
   ws_chat: WsChat[]
   ws_message: WsMessage[]
+  media: Media[]
   ws_group: WsGroup[]
   ws_group_participants: WsGroupParticipants[]
   tg_dialog: TgDialog[]
@@ -244,6 +259,11 @@ export let proxy = proxySchema<DBProxy>({
       ['from_user', { field: 'from_user_id', table: 'ws_user' }],
       ['to_user', { field: 'to_user_id', table: 'ws_user' }],
       ['author_user', { field: 'author_user_id', table: 'ws_user' }],
+      ['media', { field: 'media_id', table: 'media' }],
+    ],
+    media: [
+      /* foreign references */
+      ['ws_message', { field: 'ws_message_id', table: 'ws_message' }],
     ],
     ws_group: [
       /* foreign references */

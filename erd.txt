@@ -67,6 +67,19 @@ is_gif boolean
 links json NULL
 poll_options json NULL
 poll_votes json NULL
+media_id integer NULL FK >0- media.id
+
+
+media
+-----
+id integer PK
+ws_message_id integer unique NULL FK >0- ws_message.id
+source text
+filename text
+content_type text
+bytes integer NULL
+downloaded_at integer NULL
+download_error text NULL
 
 
 ws_group
