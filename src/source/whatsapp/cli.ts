@@ -1,7 +1,7 @@
 import { env } from '../../env'
 import { attachClient } from '../../server'
 import { getClient } from './adapter'
-import { getChatId, sync, syncMessage } from './sync'
+import { getChatId, sync, syncMessageWithMedia } from './sync'
 import { log } from './utils'
 
 export async function main() {
@@ -31,7 +31,7 @@ export async function main() {
 
   attachClient(adapter.client)
 
-  adapter.client.on('message', message => {
+  adapter.client.on('message', async message => {
     try {
       // writeFileSync(
       //   `res/new-message-${message.id.id}.json`,
@@ -45,16 +45,16 @@ export async function main() {
       //   chat: { id: chat_id, name: chat.name },
       //   body: message.body,
       // })
-      let message_id = syncMessage(message, chat_id)
+      let message_id = await syncMessageWithMedia(message, chat_id)
       // log.debug({ message_id })
     } catch (error) {
       let error_message = String(error)
       if (error_message.includes('not found')) {
         // message new from group
         sync(adapter.client)
-          .then(() => {
+          .then(async () => {
             let chat_id = getChatId(message)
-            syncMessage(message, chat_id)
+            await syncMessageWithMedia(message, chat_id)
           })
           .catch(error => {
             log.error('failed to sync chat list:', error)
