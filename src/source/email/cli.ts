@@ -1,5 +1,6 @@
 import { env } from '../../env'
 import { getClient } from './adapter'
+import { syncClient } from './sync'
 import { log } from './utils'
 
 export async function main() {
@@ -49,5 +50,20 @@ export async function main() {
   for (let adapter of adapters) {
     log.app('mailbox identity:', adapter.getIdentity() || 'unknown')
     log.app('auth state:', adapter.getAuthState())
+  }
+
+  let sync_results = await Promise.allSettled(
+    adapters.map(async adapter => {
+      try {
+        await syncClient(adapter.client)
+      } catch (error) {
+        log.error('sync failed', adapter.getIdentity(), error)
+      }
+    }),
+  )
+  for (let result of sync_results) {
+    if (result.status === 'rejected') {
+      log.error('sync rejected', result.reason)
+    }
   }
 }

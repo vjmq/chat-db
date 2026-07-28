@@ -10,10 +10,10 @@
   - [x] parallel init via `Promise.allSettled` (one bad account doesn't block the others)
   - [x] per-account session dir + per-account DB rows (`em_account.id` scopes `em_chat` / `em_message`)
   - [x] per-account `last_synced_at` cursor
-  - [ ] kick off `syncClient` from `cli.ts:run` after `ready` (currently only the smoke test calls it)
-  - [ ] wire `email_cli.main()` into `src/cli.ts` so `npm start` runs it
+  - [x] kick off `syncClient` from `cli.ts:run` after `ready` (currently only the smoke test calls it)
+  - [x] wire `email_cli.main()` into `src/cli.ts` so `npm start` runs it
   - [ ] reconnect on `disconnected` event with backoff so a socket blip doesn't take an account offline until restart
-  - [ ] per-account try/catch around `syncClient` so one bad account doesn't kill the others
+  - [x] per-account try/catch around `syncClient` so one bad account doesn't kill the others
 
 ## Notes
 
