@@ -34,6 +34,9 @@ export async function main() {
     })
     adapter.events.on('disconnected', reason => {
       log.client('disconnected', account.id, reason)
+      reconnect(account, adapter).catch(error => {
+        log.error('reconnect failed', account.id, error)
+      })
     })
     adapter.events.on('authenticated', () => {
       log.client('authenticated', account.id)
@@ -66,4 +69,24 @@ export async function main() {
       log.error('sync rejected', result.reason)
     }
   }
+}
+
+async function reconnect(account: any, old_adapter: any) {
+  let delay = 1000
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    await new Promise(r => setTimeout(r, delay))
+    try {
+      await old_adapter.disconnect?.()
+    } catch {}
+    try {
+      let next = getClient({ session_dir: env.EMAIL_SESSION_DIR, account })
+      await next.ready
+      try { await syncClient(next.client) } catch (e) { log.error('sync failed', account.id, e) }
+      return
+    } catch (error) {
+      log.client('reconnect failed', account.id, attempt, error)
+      delay = Math.min(delay * 2, 30000)
+    }
+  }
+  log.error('giving up reconnect', account.id)
 }

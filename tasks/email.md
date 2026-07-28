@@ -12,7 +12,7 @@
   - [x] per-account `last_synced_at` cursor
   - [x] kick off `syncClient` from `cli.ts:run` after `ready` (currently only the smoke test calls it)
   - [x] wire `email_cli.main()` into `src/cli.ts` so `npm start` runs it
-  - [ ] reconnect on `disconnected` event with backoff so a socket blip doesn't take an account offline until restart
+  - [x] reconnect on `disconnected` event with backoff so a socket blip doesn't take an account offline until restart
   - [x] per-account try/catch around `syncClient` so one bad account doesn't kill the others
 
 ## Notes
