@@ -74,7 +74,7 @@ export async function sync(client: Client) {
         `[sync] saving chat ${chat_index}/${chats.length} messages... ` +
           formatProgress(message_index, messages.length),
       )
-      syncMessage(message, chat_id)
+      syncMessageWithMedia(message, chat_id)
     }
     if (messages.length === 0) {
       cli.update(
@@ -294,6 +294,24 @@ export let syncMessage = (
   return message_id
 }
 syncMessage = db.transaction(syncMessage)
+
+export async function syncMessageWithMedia(
+  message: WMessage & { _data?: MessageData },
+  chat_id = getChatId(message),
+): Promise<number> {
+  let message_id = syncMessage(message, chat_id)
+  if (message.hasMedia) {
+    let media_id = await downloadMessageMedia({
+      ws_message_id: message_id,
+      api_id: message.id.id,
+      message,
+    })
+    if (media_id != null) {
+      update(proxy.ws_message, { id: message_id }, { media_id })
+    }
+  }
+  return message_id
+}
 
 const DOWNLOAD_DIR = join('res', 'downloads', 'whatsapp')
 
