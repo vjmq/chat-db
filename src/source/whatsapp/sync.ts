@@ -7,6 +7,8 @@ import { GroupMetadata, MessageData } from '../../types'
 import { ProgressCli } from '@beenotung/tslib/progress-cli'
 import { sleep } from '@beenotung/tslib/async/wait'
 import { writeFileSync } from './utils'
+import { mkdirSync, writeFileSync as fsWriteFile } from 'fs'
+import { extname, join } from 'path'
 
 let select_user_without_tel = db.prepare<
   void[],
@@ -248,6 +250,7 @@ export let syncMessage = (
     { api_id: message.id.id },
     {
       chat_id,
+      media_id: null,
       ack: message.ack,
       has_media: message.hasMedia,
       body: message.body,
@@ -291,3 +294,51 @@ export let syncMessage = (
   return message_id
 }
 syncMessage = db.transaction(syncMessage)
+
+const DOWNLOAD_DIR = join('res', 'downloads', 'whatsapp')
+
+function mimeExt(mime: string): string {
+  if (mime.startsWith('audio/')) return `.${mime.split('/')[1].split(';')[0]}`
+  if (mime.startsWith('image/')) return `.${mime.split('/')[1]}`
+  if (mime.startsWith('video/')) return `.${mime.split('/')[1]}`
+  return '.bin'
+}
+
+export async function downloadMessageMedia(args: {
+  ws_message_id: number
+  api_id: string
+  message: WMessage
+}): Promise<number | null> {
+  let message = args.message
+  if (!message.hasMedia) return null
+  let filename = ''
+  let content_type = ''
+  let bytes = 0
+  let download_error: string | null = null
+  try {
+    let media = await message.downloadMedia()
+    content_type = media.mimetype
+    let has_ext = media.filename && extname(media.filename)
+    filename = has_ext
+      ? media.filename!
+      : `${args.api_id}${mimeExt(media.mimetype)}`
+    mkdirSync(DOWNLOAD_DIR, { recursive: true })
+    let buf = Buffer.from(media.data, 'base64')
+    bytes = buf.length
+    fsWriteFile(join(DOWNLOAD_DIR, filename), buf)
+  } catch (e) {
+    download_error = String(e)
+  }
+  return seedRow(
+    proxy.media,
+    { ws_message_id: args.ws_message_id },
+    {
+      source: 'whatsapp',
+      filename,
+      content_type,
+      bytes,
+      downloaded_at: download_error ? null : Date.now(),
+      download_error,
+    },
+  )
+}
