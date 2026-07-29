@@ -34,6 +34,7 @@
     "@types/integer": "^4.0.3",
     "@types/mailparser": "^3.4.6",
     "@types/node": "^24.13.2",
+    "@types/nodemailer": "^8.0.1",
     "@types/qrcode-terminal": "^0.12.2",
     "gen-env": "^1.0.1",
     "npm-run-all": "^4.1.5",
@@ -56,6 +57,7 @@
     "knex": "^3.1.0",
     "listening-on": "^2.1.0",
     "mailparser": "^3.9.14",
+    "nodemailer": "^9.0.3",
     "populate-env": "^2.6.1",
     "puppeteer": "24.38.0",
     "teleproto": "^1.228.3",
@@ -66,5 +68,8 @@
       "puppeteer",
       "better-sqlite3"
     ]
+  },
+  "allowScripts": {
+    "puppeteer@24.38.0": true
   }
 }
