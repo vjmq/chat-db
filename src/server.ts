@@ -8,6 +8,9 @@ import { db } from './db'
 import { getName, getTel } from './source/whatsapp/store'
 import { Client } from 'whatsapp-web.js'
 import { syncMessage } from './source/whatsapp/sync'
+import { join as pathJoin } from 'path'
+
+const MEDIA_DIR = pathJoin('res', 'downloads', 'whatsapp')
 
 let app = express()
 
@@ -154,6 +157,84 @@ app.post('/hooks/new-message', (req, res) => {
     let input = register_hook_parser.parse(req)
     hooks.new_message_url = input.body.url
     res.json({ hooks })
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
+
+let select_media = db.prepare<
+  { chat_id: number },
+  {
+    id: number
+    filename: string
+    content_type: string
+    bytes: number | null
+    downloaded_at: number | null
+    download_error: string | null
+    message_id: number
+    message_type: string
+    timestamp: number
+    from_user_id: number
+    from_name?: string
+    from_tel?: string
+  }
+>(/* sql */ `
+select
+  media.id
+, media.filename
+, media.content_type
+, media.bytes
+, media.downloaded_at
+, media.download_error
+, message.id as message_id
+, message.type as message_type
+, message.timestamp
+, ifnull(message.author_user_id, message.from_user_id) as from_user_id
+from media
+inner join ws_message as message on message.id = media.ws_message_id
+where message.chat_id = :chat_id
+order by message.timestamp asc
+`)
+
+let list_media_parser = object({
+  params: object({ id: id() }),
+})
+app.get('/chats/whatsapp/:id/media', (req, res) => {
+  try {
+    let input = list_media_parser.parse(req)
+    let media = select_media.all({ chat_id: input.params.id })
+    for (let m of media) {
+      let from_name = getName(m.from_user_id)
+      if (from_name) m.from_name = from_name
+      let from_tel = getTel(m.from_user_id)
+      if (from_tel) m.from_tel = from_tel
+    }
+    res.json({ media })
+  } catch (error) {
+    res.json({ error: String(error) })
+  }
+})
+
+let select_media_row = db.prepare<
+  { id: number },
+  { filename: string; content_type: string }
+>(/* sql */ `
+select filename, content_type
+from media
+where id = :id
+`)
+
+let get_media_parser = object({ params: object({ id: id() }) })
+app.get('/media/:id', (req, res) => {
+  try {
+    let input = get_media_parser.parse(req)
+    let row = select_media_row.get({ id: input.params.id })
+    if (!row || !row.filename) {
+      res.status(404).json({ error: 'media not found' })
+      return
+    }
+    res.setHeader('Content-Type', row.content_type || 'application/octet-stream')
+    res.sendFile(pathJoin(MEDIA_DIR, row.filename), { root: process.cwd() })
   } catch (error) {
     res.json({ error: String(error) })
   }
