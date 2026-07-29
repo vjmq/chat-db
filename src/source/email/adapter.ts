@@ -5,8 +5,9 @@ import { ClientEventMap, AuthState } from '../../utils'
 import { log } from './utils'
 import { ImapFlow, ImapAccountConfig } from './providers/imap'
 import { GMAIL_IMAP, GmailAccountConfig } from './providers/gmail'
+import { OUTLOOK_IMAP, OutlookAccountConfig } from './providers/outlook'
 
-export type EmailProvider = 'gmail' | 'imap'
+export type EmailProvider = 'gmail' | 'imap' | 'outlook'
 
 export type EmailAccountConfig = {
   id: string
@@ -14,6 +15,7 @@ export type EmailAccountConfig = {
   address: string
   gmail?: GmailAccountConfig
   imap?: ImapAccountConfig
+  outlook?: OutlookAccountConfig
   mailbox?: string
 }
 
@@ -36,6 +38,19 @@ function resolveImapOptions(account: EmailAccountConfig) {
       tls: GMAIL_IMAP.tls,
       user: account.gmail.user,
       password: account.gmail.app_password,
+      mailbox,
+    }
+  }
+  if (account.provider === 'outlook') {
+    if (!account.outlook) {
+      throw new Error(`Outlook account ${account.id} is missing outlook config`)
+    }
+    return {
+      host: OUTLOOK_IMAP.host,
+      port: OUTLOOK_IMAP.port,
+      tls: OUTLOOK_IMAP.tls,
+      user: account.outlook.user,
+      password: account.outlook.app_password,
       mailbox,
     }
   }
@@ -73,7 +88,8 @@ export function getClient(options: {
       }
       if (
         options.account.provider !== 'gmail' &&
-        options.account.provider !== 'imap'
+        options.account.provider !== 'imap' &&
+        options.account.provider !== 'outlook'
       ) {
         throw new Error(
           `Unsupported email provider: ${options.account.provider}`,

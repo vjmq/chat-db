@@ -2,6 +2,8 @@ import { appendEnv, populateEnv } from 'populate-env'
 
 export let env = {
   WS_SESSION_DIR: '.wwebjs_auth',
+  WS_CHAT_LIMIT: 3,
+  WS_MESSAGE_LIMIT: 32,
   TG_SESSION_DIR: '.tg_auth',
   TG_API_ID: NaN,
   TG_API_HASH: '',

@@ -15,7 +15,7 @@
     "start": "ts-node src/cli.ts",
     "test": "tsc --noEmit",
     "clean": "rimraf dist",
-    "build": "rimraf dist && tsc -p . && rimraf dist/tsconfig.tsbuildinfo dist/*.test.d.ts dist/*.test.js dist/*.spec.d.ts dist/*.spec.js",
+    "build": "rimraf dist && tsc -p . && rimraf dist/tsconfig.tsbuildinfo && powershell -NoProfile -Command \"Get-ChildItem -Path dist -Include *.test.d.ts,*.test.js,*.spec.d.ts,*.spec.js -Recurse -Force | Remove-Item -Force\"",
     "tsc": "tsc -p .",
     "dev": "tsc -p . --watch",
     "db:ui": "erd-ui erd.txt",

@@ -1,10 +1,10 @@
 # Outlook Integration
 
-Mirror the Gmail/IMAP path. Outlook.com speaks IMAP, so the existing `imapflow` provider covers it — just add a preset.
+Mirror the Gmail/IMAP path. Outlook.com speaks IMAP, so the existing `imapflow` provider covers it — just add a preset
 
 ## Checklist
 
-- [ ] add `outlook` preset in `src/source/email/providers/` (host `imap-mail.outlook.com`, port 993, TLS). Extend `EmailProvider` union in `adapter.ts`.
+- [x] add `outlook` preset in `src/source/email/providers/` (host `imap-mail.outlook.com`, port 993, TLS). Extend `EmailProvider` union in `adapter.ts`.
 - [ ] document Outlook app-password setup in `email.md`; allow `outlook` entries in `EMAIL_ACCOUNTS` config (`provider: 'outlook'`, `user`, `app_password`).
 - [ ] reuse `em_*` tables from `erd.txt` — no schema changes needed.
 - [ ] verify `syncClient` correctly threads Outlook-specific quirks (folder name is `INBOX`, same as IMAP; `Message-ID` / `In-Reply-To` pairing works the same).

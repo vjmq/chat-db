@@ -2,11 +2,12 @@ import { Client, Chat as WChat, Message as WMessage } from 'whatsapp-web.js'
 import { count, find, pick, seedRow, update } from 'better-sqlite3-proxy'
 import { WsChat, proxy } from '../../proxy'
 import { db } from '../../db'
+import { env } from '../../env'
 import { formatProgress } from '../../format'
 import { GroupMetadata, MessageData } from '../../types'
 import { ProgressCli } from '@beenotung/tslib/progress-cli'
 import { sleep } from '@beenotung/tslib/async/wait'
-import { writeFileSync } from './utils'
+import { writeFileSync, log } from './utils'
 import { mkdirSync, writeFileSync as fsWriteFile } from 'fs'
 import { extname, join } from 'path'
 
@@ -24,7 +25,11 @@ where tel is null
 export async function sync(client: Client) {
   let cli = new ProgressCli()
 
-  let chats = await client.getChats()
+  let chats = await getChatsWithRetry(client)
+  if (chats.length === 0) {
+    log.error('no chats returned from WhatsApp web after retries')
+  }
+  chats = applyChatLimit(chats)
   // writeFileSync('chats.json', chats))
   let pairs = []
   let chat_index = 0
@@ -121,6 +126,90 @@ async function retry(fn: () => Promise<void>) {
   }
 }
 
+async function retryReturn<T>(fn: () => Promise<T>): Promise<T> {
+  let max_attempts = 90
+  let last_error: any = null
+  let last_was_empty = false
+  for (let attempt = 0; attempt < max_attempts; attempt++) {
+    try {
+      let result = await fn()
+      let is_empty = !!(result && (result as any).length === 0)
+      if (is_empty) {
+        last_was_empty = true
+        if (attempt < max_attempts - 1) {
+          if (attempt % 10 === 0) {
+            log.app(
+              `getChats still empty after ${attempt}s, waiting for chat list to hydrate...`,
+            )
+          }
+          await sleep(1000)
+          continue
+        }
+      }
+      return result
+    } catch (error) {
+      last_error = error
+      last_was_empty = false
+      if (attempt < max_attempts - 1) {
+        await sleep(1000)
+        continue
+      }
+    }
+  }
+  if (last_was_empty) {
+    throw new Error(
+      'retryReturn: exhausted retries (last call returned empty array)',
+    )
+  }
+  throw last_error ?? new Error('retryReturn: exhausted retries')
+}
+
+async function getChatsWithRetry(client: Client) {
+  await sleep(2000)
+  try {
+    return await retryReturn(() => client.getChats() as Promise<WChat[]>)
+  } catch (error) {
+    let state = await safeGetState(client)
+    log.error(
+      'getChats failed after retries; page state =',
+      state,
+      'error =',
+      String(error),
+    )
+    throw error
+  }
+}
+
+async function safeGetState(client: Client): Promise<string> {
+  try {
+    let state = await client.getState()
+    return String(state)
+  } catch {
+    return 'unknown (evaluate failed)'
+  }
+}
+
+function applyChatLimit(chats: WChat[]): WChat[] {
+  let chat_limit = Number(env.WS_CHAT_LIMIT)
+  if (!Number.isFinite(chat_limit) || chat_limit <= 0) return chats
+  let limit = Math.floor(chat_limit)
+  if (limit >= chats.length) return chats
+  let scored = chats.map(chat => {
+    let user_id = getUserId(chat.id)
+    let chat_row = find(proxy.ws_chat, { user_id })
+    let existing = chat_row?.id
+      ? count(proxy.ws_message, { chat_id: chat_row.id! })
+      : 0
+    return { chat, existing }
+  })
+  scored.sort((a, b) => a.existing - b.existing)
+  let picked = scored.slice(0, limit)
+  log.app(
+    `WS_CHAT_LIMIT active: syncing ${picked.length}/${chats.length} chats (skipped ${chats.length - picked.length}, prioritized by least-synced)`,
+  )
+  return picked.map(p => p.chat)
+}
+
 async function fetchMessages(args: {
   chat: WChat
   onProgress: (count: number) => void
@@ -132,6 +221,14 @@ async function fetchMessages(args: {
   while (true) {
     await sleep(interval)
     let messages = await args.chat.fetchMessages({ limit })
+    let message_limit = Number(env.WS_MESSAGE_LIMIT)
+    if (
+      Number.isFinite(message_limit) &&
+      message_limit > 0 &&
+      messages.length > message_limit
+    ) {
+      messages = messages.slice(0, Math.floor(message_limit))
+    }
     args.onProgress(messages.length)
     if (messages.length != prev_count) {
       prev_count = messages.length
