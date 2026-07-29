@@ -4,7 +4,11 @@ import { syncClient } from './sync'
 import { log } from './utils'
 
 export async function main() {
-  let accounts = [] as Array<{ id: string; provider: 'gmail' | 'imap'; address: string }>
+  let accounts = [] as Array<{
+    id: string
+    provider: 'gmail' | 'imap' | 'outlook'
+    address: string
+  }>
 
   try {
     let parsed = JSON.parse(env.EMAIL_ACCOUNTS)

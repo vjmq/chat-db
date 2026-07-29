@@ -5,7 +5,7 @@ Mirror the Gmail/IMAP path. Outlook.com speaks IMAP, so the existing `imapflow` 
 ## Checklist
 
 - [x] add `outlook` preset in `src/source/email/providers/` (host `imap-mail.outlook.com`, port 993, TLS). Extend `EmailProvider` union in `adapter.ts`.
-- [ ] document Outlook app-password setup in `email.md`; allow `outlook` entries in `EMAIL_ACCOUNTS` config (`provider: 'outlook'`, `user`, `app_password`).
+- [x] document Outlook app-password setup in `email.md`; allow `outlook` entries in `EMAIL_ACCOUNTS` config (`provider: 'outlook'`, `user`, `app_password`).
 - [ ] reuse `em_*` tables from `erd.txt` — no schema changes needed.
 - [ ] verify `syncClient` correctly threads Outlook-specific quirks (folder name is `INBOX`, same as IMAP; `Message-ID` / `In-Reply-To` pairing works the same).
 - [ ] add reconnect/backoff and per-account error isolation (same patterns already in place for Gmail).
