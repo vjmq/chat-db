@@ -35,6 +35,4 @@ Add `send()` to the email adapter so Gmail and Outlook accounts can dispatch mai
 
 ## Out of scope
 
-- HTTP route (`POST /email/send`) — separate task.
-- HTML body, attachments, BCC, multiple recipients.
-- Generic `imap` provider SMTP auto-detect — user must supply `smtp` block.
+- HTTP route (`POST /email/send`) — separate task

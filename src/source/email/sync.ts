@@ -160,3 +160,36 @@ export async function syncClient(client: EmailClientLike) {
     fetchMessages(client.imap, client.mailbox, account.address, since),
   )
 }
+
+export function recordSent(args: {
+  account: EmailAccountConfig
+  to_address: string
+  subject: string
+  body: string
+  message_id_header: string
+  in_reply_to?: string | null
+  references?: string | null
+  timestamp?: number
+}) {
+  let account = args.account
+  let subject = args.subject
+  let thread_key = subject
+    .replace(/^(re|fwd|fw)\s*:\s*/i, '')
+    .replace(/^\s+|\s+$/g, '')
+    .toLowerCase() || '(no-subject)'
+  return syncMessage(account, {
+    api_id: args.message_id_header,
+    thread_key,
+    from_address: account.address,
+    from_display_name: null,
+    to_address: args.to_address,
+    to_display_name: null,
+    body: args.body,
+    timestamp: args.timestamp ?? Date.now(),
+    from_me: true,
+    message_id_header: args.message_id_header,
+    in_reply_to: args.in_reply_to ?? null,
+    references: args.references ?? null,
+    subject,
+  })
+}

@@ -1,11 +1,13 @@
 import { mkdirSync } from 'fs'
 import { join } from 'path'
 import { EventEmitter } from 'events'
+import nodemailer, { Transporter } from 'nodemailer'
 import { ClientEventMap, AuthState } from '../../utils'
 import { log } from './utils'
+import { recordSent } from './sync'
 import { ImapFlow, ImapAccountConfig } from './providers/imap'
-import { GMAIL_IMAP, GmailAccountConfig } from './providers/gmail'
-import { OUTLOOK_IMAP, OutlookAccountConfig } from './providers/outlook'
+import { GMAIL_IMAP, GMAIL_SMTP, GmailAccountConfig } from './providers/gmail'
+import { OUTLOOK_IMAP, OUTLOOK_SMTP, OutlookAccountConfig } from './providers/outlook'
 
 export type EmailProvider = 'gmail' | 'imap' | 'outlook'
 
@@ -24,6 +26,45 @@ export type EmailClientLike = {
   provider: EmailProvider
   imap: ImapFlow
   mailbox: string
+  send: (opts: {
+    to: string
+    subject: string
+    body: string
+    in_reply_to?: string | null
+    references?: string | null
+  }) => Promise<{ messageId: string }>
+}
+
+function resolveSmtpOptions(account: EmailAccountConfig) {
+  if (account.provider === 'gmail' && account.gmail) {
+    return {
+      host: GMAIL_SMTP.host,
+      port: GMAIL_SMTP.port,
+      secure: GMAIL_SMTP.secure,
+      user: account.gmail.user,
+      password: account.gmail.app_password,
+    }
+  }
+  if (account.provider === 'outlook' && account.outlook) {
+    return {
+      host: OUTLOOK_SMTP.host,
+      port: OUTLOOK_SMTP.port,
+      secure: OUTLOOK_SMTP.secure,
+      user: account.outlook.user,
+      password: account.outlook.app_password,
+    }
+  }
+  if (account.imap?.smtp) {
+    let s = account.imap.smtp
+    return {
+      host: s.host,
+      port: s.port ?? 465,
+      secure: s.secure ?? true,
+      user: s.user,
+      password: s.password,
+    }
+  }
+  throw new Error(`Account ${account.id} has no SMTP config`)
 }
 
 function resolveImapOptions(account: EmailAccountConfig) {
@@ -78,6 +119,7 @@ export function getClient(options: {
   let authState: AuthState = 'loading'
 
   let imap: ImapFlow
+  let transporter: Transporter | undefined
   let client: EmailClientLike | undefined
   let mailbox = 'INBOX'
 
@@ -123,11 +165,44 @@ export function getClient(options: {
       await imap.connect()
       let lock = await imap.getMailboxLock(mailbox)
 
+      let smtp = resolveSmtpOptions(options.account)
+      transporter = nodemailer.createTransport({
+        host: smtp.host,
+        port: smtp.port,
+        secure: smtp.secure,
+        requireTLS: smtp.port === 587,
+        auth: { user: smtp.user, pass: smtp.password },
+      })
+
+      async function send(opts: {
+        to: string
+        subject: string
+        body: string
+        in_reply_to?: string | null
+        references?: string | null
+      }) {
+        if (!transporter) throw new Error('email client not ready')
+        let headers: Record<string, string> = {}
+        if (opts.in_reply_to) headers['In-Reply-To'] = opts.in_reply_to
+        if (opts.references) headers['References'] = opts.references
+        let info = await transporter.sendMail({
+          from: options.account.address,
+          to: opts.to,
+          subject: opts.subject,
+          text: opts.body,
+          headers,
+        })
+        let raw = info.messageId ?? ''
+        let messageId = raw.replace(/^<|>$/g, '')
+        return { messageId }
+      }
+
       client = {
         account: options.account,
         provider: options.account.provider,
         imap,
         mailbox,
+        send,
       }
 
       authState = 'authenticated'
