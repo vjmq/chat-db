@@ -8,3 +8,9 @@ export const GMAIL_IMAP = {
   port: 993,
   tls: true,
 }
+
+export const GMAIL_SMTP = {
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+}

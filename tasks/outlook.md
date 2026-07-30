@@ -8,7 +8,7 @@ Mirror the Gmail/IMAP path. Outlook.com speaks IMAP, so the existing `imapflow` 
 - [x] document Outlook app-password setup in `email.md`; allow `outlook` entries in `EMAIL_ACCOUNTS` config (`provider: 'outlook'`, `user`, `app_password`).
 - [x] reuse `em_*` tables from `erd.txt` — no schema changes needed. `em_account.provider` is plain `text` and already accepts `'outlook'`; per-account `last_synced_at` cursor naturally isolates Outlook sync from Gmail.
 - [x] verify `syncClient` correctly threads Outlook-specific quirks (folder name is `INBOX`, same as IMAP; `Message-ID` / `In-Reply-To` pairing works the same).
-- [ ] add reconnect/backoff and per-account error isolation (same patterns already in place for Gmail).
+- [x] add reconnect/backoff and per-account error isolation (same patterns already in place for Gmail)
 - [ ] sending (later): use `smtp.office365.com:587` STARTTLS with the same app password via `nodemailer`.
 
 ## Notes

@@ -12,4 +12,5 @@ export const OUTLOOK_IMAP = {
 export const OUTLOOK_SMTP = {
   host: 'smtp.office365.com',
   port: 587,
+  secure: false,
 }

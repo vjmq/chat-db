@@ -7,6 +7,15 @@ export type ImapAccountConfig = {
   password: string
   tls?: boolean
   mailbox?: string
+  smtp?: ImapSmtpConfig
+}
+
+export type ImapSmtpConfig = {
+  host: string
+  port?: number
+  user: string
+  password: string
+  secure?: boolean
 }
 
 export { ImapFlow }
