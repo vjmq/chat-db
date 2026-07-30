@@ -1,4 +1,5 @@
 import { Client, Chat as WChat, Message as WMessage } from 'whatsapp-web.js'
+import type { Page } from 'puppeteer'
 import { count, find, pick, seedRow, update } from 'better-sqlite3-proxy'
 import { WsChat, proxy } from '../../proxy'
 import { db } from '../../db'
@@ -170,6 +171,7 @@ async function getChatsWithRetry(client: Client) {
     return await retryReturn(() => client.getChats() as Promise<WChat[]>)
   } catch (error) {
     let state = await safeGetState(client)
+    await safeProbePage(client, error)
     log.error(
       'getChats failed after retries; page state =',
       state,
@@ -178,6 +180,61 @@ async function getChatsWithRetry(client: Client) {
     )
     throw error
   }
+}
+
+async function safeProbePage(client: Client, error: any): Promise<void> {
+  try {
+    let state = await client.getState()
+    let page = (client as unknown as { pupPage?: Page }).pupPage
+    if (!page) {
+      log.error('probe: state =', state, ', no pupPage')
+      return
+    }
+    let url = page.url()
+    let info = await page.evaluate(() => {
+      let w = (window as any).WWebJS
+      let has_wweb = !!w
+      let has_get_chats = has_wweb && typeof w.getChats === 'function'
+      let collections = (() => {
+        try {
+          return (window as any).require?.('WAWebCollections')
+        } catch {
+          return null
+        }
+      })()
+      let has_chat_collection =
+        !!(collections && typeof collections.Chat?.getModelsArray === 'function')
+      let chat_panel_present = !!document.querySelector(
+        '[aria-label="Chat list"], [data-testid="chat-list-search"], div[data-tab="3"]',
+      )
+      let visible_url = location.pathname
+      return {
+        has_wweb,
+        has_get_chats,
+        has_chat_collection,
+        chat_panel_present,
+        visible_url,
+      }
+    })
+    log.error('probe:', {
+      state,
+      url,
+      info,
+      error_classified_as: classifyChatError(error),
+    })
+  } catch (probe_error) {
+    log.error('probe itself failed:', String(probe_error))
+  }
+}
+
+function classifyChatError(error: any): string {
+  let msg = String(error)
+  if (/^\s*r\s*:/m.test(msg)) return 'minified-throw (page-side non-Error)'
+  if (msg.includes('Execution context was destroyed'))
+    return 'page-context-destroyed'
+  if (msg.includes('getModelsArray')) return 'chat-collection-getter-threw'
+  if (msg.toLowerCase().includes('navigation')) return 'navigation'
+  return 'unknown'
 }
 
 async function safeGetState(client: Client): Promise<string> {
@@ -397,7 +454,8 @@ export async function syncMessageWithMedia(
   chat_id = getChatId(message),
 ): Promise<number> {
   let message_id = syncMessage(message, chat_id)
-  if (message.hasMedia) {
+  let row = proxy.ws_message[message_id]
+  if (message.hasMedia && !row.media_id) {
     let media_id = await downloadMessageMedia({
       ws_message_id: message_id,
       api_id: message.id.id,
@@ -444,7 +502,7 @@ export async function downloadMessageMedia(args: {
   } catch (e) {
     download_error = String(e)
   }
-  return seedRow(
+  let media_id = seedRow(
     proxy.media,
     { ws_message_id: args.ws_message_id },
     {
@@ -456,4 +514,5 @@ export async function downloadMessageMedia(args: {
       download_error,
     },
   )
+  return download_error ? null : media_id
 }

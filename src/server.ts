@@ -163,7 +163,7 @@ app.post('/hooks/new-message', (req, res) => {
 })
 
 let select_media = db.prepare<
-  { chat_id: number },
+  { chat_id: number; type: string | null },
   {
     id: number
     filename: string
@@ -193,16 +193,23 @@ select
 from media
 inner join ws_message as message on message.id = media.ws_message_id
 where message.chat_id = :chat_id
+  and (:type is null or message.type = :type)
 order by message.timestamp asc
 `)
 
 let list_media_parser = object({
   params: object({ id: id() }),
+  query: object({
+    type: optional(string()),
+  }),
 })
 app.get('/chats/whatsapp/:id/media', (req, res) => {
   try {
     let input = list_media_parser.parse(req)
-    let media = select_media.all({ chat_id: input.params.id })
+    let media = select_media.all({
+      chat_id: input.params.id,
+      type: input.query.type || null,
+    })
     for (let m of media) {
       let from_name = getName(m.from_user_id)
       if (from_name) m.from_name = from_name

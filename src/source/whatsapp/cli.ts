@@ -66,6 +66,9 @@ export async function main() {
   })
 
   log.app('syncing messages...')
-  await sync(adapter.client)
-  log.app('synced messages')
+  sync(adapter.client)
+    .then(() => log.app('synced messages'))
+    .catch(error => {
+      log.error('initial sync failed; live messages will still flow:', error)
+    })
 }
