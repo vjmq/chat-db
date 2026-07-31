@@ -35,4 +35,31 @@ Add `send()` to the email adapter so Gmail and Outlook accounts can dispatch mai
 
 ## Out of scope
 
-- HTTP route (`POST /email/send`) — separate task
+- ~~HTTP route (`POST /email/send`) — separate task~~ — added in 2026-07-30 (see "Route usage" below).
+
+## Route usage
+
+After `emailClients` is populated by `email_cli.main()`, the server exposes:
+
+```
+POST /email/send
+Headers: X-API-KEY: <env.API_KEY>
+Body:    { "account_id": "<id from EMAIL_ACCOUNTS>",
+           "to":         "recipient@example.com",
+           "subject":    "Hello",
+           "body":       "Plain-text body",
+           "in_reply_to": "<optional Message-ID of an inbound message>",
+           "references":  "<optional References header>" }
+Response: { "messageId": "<Message-ID, angle brackets stripped>" }
+```
+
+Example:
+
+```bash
+curl -X POST http://localhost:3000/email/send \
+  -H "X-API-KEY: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"account_id":"acc-1","to":"x@example.com","subject":"hi","body":"hello"}'
+```
+
+To reply to an inbound message, pass its `message_id_header` as `in_reply_to` (and the same value in `references` if you have it). The outgoing row is written via `recordSent` with `from_me = 1`, so the next inbound reply threads onto the same `em_chat.thread_key` automatically. `404` means the `account_id` is not in `EMAIL_ACCOUNTS` (or its adapter is disconnected — it is removed from the map on `disconnected` and re-added on reconnect).

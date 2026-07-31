@@ -3,6 +3,8 @@ import { getClient } from './adapter'
 import { syncClient } from './sync'
 import { log } from './utils'
 
+export let emailClients = new Map<string, ReturnType<typeof getClient>>()
+
 export async function main() {
   let accounts = [] as Array<{
     id: string
@@ -29,6 +31,7 @@ export async function main() {
       session_dir: env.EMAIL_SESSION_DIR,
       account,
     })
+    emailClients.set(account.id, adapter)
 
     adapter.events.on('ready', () => {
       log.client('ready', account.id)
@@ -38,6 +41,7 @@ export async function main() {
     })
     adapter.events.on('disconnected', reason => {
       log.client('disconnected', account.id, reason)
+      emailClients.delete(account.id)
       reconnect(account, adapter).catch(error => {
         log.error('reconnect failed', account.id, error)
       })
@@ -85,6 +89,7 @@ async function reconnect(account: any, old_adapter: any) {
     try {
       let next = getClient({ session_dir: env.EMAIL_SESSION_DIR, account })
       await next.ready
+      emailClients.set(account.id, next)
       try { await syncClient(next.client) } catch (e) { log.error('sync failed', account.id, e) }
       return
     } catch (error) {

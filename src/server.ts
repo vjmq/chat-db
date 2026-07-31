@@ -8,6 +8,8 @@ import { db } from './db'
 import { getName, getTel } from './source/whatsapp/store'
 import { Client } from 'whatsapp-web.js'
 import { syncMessage } from './source/whatsapp/sync'
+import { emailClients } from './source/email/cli'
+import { recordSent } from './source/email/sync'
 import { join as pathJoin } from 'path'
 
 const MEDIA_DIR = pathJoin('res', 'downloads', 'whatsapp')
@@ -159,6 +161,46 @@ app.post('/hooks/new-message', (req, res) => {
     res.json({ hooks })
   } catch (error) {
     res.json({ error: String(error) })
+  }
+})
+
+let send_email_parser = object({
+  body: object({
+    account_id: string(),
+    to: string(),
+    subject: string(),
+    body: string(),
+    in_reply_to: optional(string()),
+    references: optional(string()),
+  }),
+})
+app.post('/email/send', async (req, res) => {
+  try {
+    let input = send_email_parser.parse(req).body
+    let adapter = emailClients.get(input.account_id)
+    if (!adapter) {
+      res.status(404).json({ error: `unknown account_id ${input.account_id}` })
+      return
+    }
+    let { messageId } = await adapter.client.send({
+      to: input.to,
+      subject: input.subject,
+      body: input.body,
+      in_reply_to: input.in_reply_to ?? null,
+      references: input.references ?? null,
+    })
+    recordSent({
+      account: adapter.client.account,
+      to_address: input.to,
+      subject: input.subject,
+      body: input.body,
+      message_id_header: messageId,
+      in_reply_to: input.in_reply_to ?? null,
+      references: input.references ?? null,
+    })
+    res.json({ messageId })
+  } catch (error) {
+    res.status(500).json({ error: String(error) })
   }
 })
 
