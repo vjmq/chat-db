@@ -2,6 +2,7 @@ node_modules/
 dist/
 *-lock.json
 *-lock.yaml
+*-workspace.yaml
 *.lock
 .*-debug.log
 *.tsbuildinfo
