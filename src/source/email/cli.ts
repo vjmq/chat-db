@@ -6,23 +6,12 @@ import { log } from './utils'
 export let emailClients = new Map<string, ReturnType<typeof getClient>>()
 
 export async function main() {
-  let accounts = [] as Array<{
-    id: string
-    provider: 'gmail' | 'imap' | 'outlook'
-    address: string
-  }>
-
-  try {
-    let parsed = JSON.parse(env.EMAIL_ACCOUNTS)
-    if (Array.isArray(parsed)) {
-      accounts = parsed
-    }
-  } catch (error) {
-    log.error('failed to parse EMAIL_ACCOUNTS', error)
-  }
+  let accounts = env.EMAIL_ACCOUNTS
 
   if (!accounts.length) {
-    log.app('no email accounts configured')
+    log.app(
+      'no email accounts configured (set EMAIL_ACCOUNTS_FILE or EMAIL_ACCOUNTS_N_* env vars)',
+    )
     return
   }
 

@@ -1,0 +1,40 @@
+[
+  {
+    "id": "personal-gmail",
+    "provider": "gmail",
+    "address": "you@gmail.com",
+    "gmail": {
+      "user": "you@gmail.com",
+      "app_password": "abcd efgh ijkl mnop"
+    }
+  },
+  {
+    "id": "personal-outlook",
+    "provider": "outlook",
+    "address": "you@outlook.com",
+    "outlook": {
+      "user": "you@outlook.com",
+      "app_password": "abcd efgh ijkl mnop"
+    }
+  },
+  {
+    "id": "work-imap",
+    "provider": "imap",
+    "address": "you@work.example.com",
+    "imap": {
+      "host": "mail.work.example.com",
+      "port": 993,
+      "user": "you@work.example.com",
+      "password": "secret",
+      "tls": true,
+      "mailbox": "INBOX",
+      "smtp": {
+        "host": "smtp.work.example.com",
+        "port": 465,
+        "user": "you@work.example.com",
+        "password": "secret",
+        "secure": true
+      }
+    }
+  }
+]
