@@ -8,7 +8,7 @@ import { formatProgress } from '../../format'
 import { GroupMetadata, MessageData } from '../../types'
 import { ProgressCli } from '@beenotung/tslib/progress-cli'
 import { sleep } from '@beenotung/tslib/async/wait'
-import { writeFileSync, log } from './utils'
+import { log } from './utils'
 import { mkdirSync, writeFileSync as fsWriteFile } from 'fs'
 import { extname, join } from 'path'
 
@@ -23,7 +23,24 @@ where tel is null
   and (server = 'lid' or server = 'c.us')
 `)
 
+let syncing = false
+export function isSyncing() {
+  return syncing
+}
+
 export async function sync(client: Client) {
+  if (syncing) {
+    return
+  }
+  syncing = true
+  try {
+    await runSync(client)
+  } finally {
+    syncing = false
+  }
+}
+
+async function runSync(client: Client) {
   let cli = new ProgressCli()
 
   let chats = await getChatsWithRetry(client)
@@ -391,6 +408,41 @@ export function getChatId(message: WMessage): number {
     throw new Error(`chat for user ${message.id.remote} not found`)
   }
   return chat_row.id!
+}
+
+// idempotent helper for the live `message` event handler
+export function seedChatFromMessage(message: WMessage): number {
+  let [user, server] = message.id.remote.split('@')
+  if (!user || !server) {
+    throw new Error(`message has invalid id.remote: ${message.id.remote}`)
+  }
+  let user_id = seedRow(proxy.ws_user, { server, user })
+  let chat_row = find(proxy.ws_chat, { user_id })
+  if (chat_row) {
+    return chat_row.id!
+  }
+  // Derive a placeholder name from the chat id (e.g. the phone number for a
+  // 1:1 chat, or the group id for a group). The outer sync() will overwrite
+  // this with the real `name` and `is_group` flag when it visits the chat
+  let name =
+    message.id.remote.endsWith('@g.us') || server === 'g.us'
+      ? `group ${user}`
+      : `+${user}`
+  let is_group = server === 'g.us'
+  let id = proxy.ws_chat.push({
+    user_id,
+    name,
+    is_group,
+    is_read_only: false,
+    unread_count: 0,
+    timestamp: message.timestamp ?? null,
+    archived: null,
+    pinned: false,
+    is_muted: false,
+    mute_expiration: 0,
+    last_message_id: null,
+  })
+  return id
 }
 
 export let syncMessage = (

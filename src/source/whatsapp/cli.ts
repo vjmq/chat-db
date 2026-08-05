@@ -1,7 +1,13 @@
 import { env } from '../../env'
 import { attachClient } from '../../server'
 import { getClient } from './adapter'
-import { getChatId, sync, syncMessageWithMedia } from './sync'
+import {
+  getChatId,
+  isSyncing,
+  seedChatFromMessage,
+  sync,
+  syncMessageWithMedia,
+} from './sync'
 import { log } from './utils'
 
 export async function main() {
@@ -50,15 +56,22 @@ export async function main() {
     } catch (error) {
       let error_message = String(error)
       if (error_message.includes('not found')) {
-        // message new from group
-        sync(adapter.client)
-          .then(async () => {
-            let chat_id = getChatId(message)
-            await syncMessageWithMedia(message, chat_id)
-          })
-          .catch(error => {
-            log.error('failed to sync chat list:', error)
-          })
+        try {
+          let chat_id = seedChatFromMessage(message)
+          await syncMessageWithMedia(message, chat_id)
+        } catch (seed_error) {
+          log.error('failed to seed chat for live message:', seed_error)
+        }
+        if (isSyncing()) {
+          log.app(
+            'sync already in progress; skipping resync for new message',
+          )
+          return
+        }
+        log.app('scheduling one-off sync for unseen chat')
+        sync(adapter.client).catch(error => {
+          log.error('on-demand sync failed:', error)
+        })
         return
       }
       log.error('failed to sync message:', error)
