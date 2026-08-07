@@ -37,6 +37,7 @@ pinned boolean
 is_muted boolean
 mute_expiration integer
 last_message_id integer NULL
+media_filenames json NULL
 
 
 ws_message

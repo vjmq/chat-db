@@ -28,6 +28,7 @@ export type WsChat = {
   is_muted: boolean
   mute_expiration: number
   last_message_id: null | number
+  media_filenames: null | string // json
 }
 
 export type WsMessage = {

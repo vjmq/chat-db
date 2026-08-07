@@ -23,6 +23,25 @@ where tel is null
   and (server = 'lid' or server = 'c.us')
 `)
 
+let select_media_filenames_for_chat = db.prepare<
+  [number],
+  { filename: string }
+>(/* sql */ `
+select m.filename
+from ws_message as msg
+join media as m on m.id = msg.media_id
+where msg.chat_id = ?
+  and m.filename is not null
+  and m.filename != ''
+order by msg.timestamp asc, m.id asc
+`)
+
+function getChatMediaFilenames(chat_id: number): string[] | null {
+  let rows = select_media_filenames_for_chat.all(chat_id)
+  let filenames = rows.map(row => row.filename)
+  return filenames.length > 0 ? filenames : null
+}
+
 let syncing = false
 export function isSyncing() {
   return syncing
@@ -336,7 +355,7 @@ function getUserId(args: { server: string; user: string }): number {
 export let syncChat = (chat: WChat & { groupMetadata?: GroupMetadata }) => {
   let user_id = getUserId(chat.id)
   let chat_row = find(proxy.ws_chat, { user_id })
-  let updates: Omit<WsChat, 'id' | 'user_id' | 'last_message_id'> = {
+  let updates: Omit<WsChat, 'id' | 'user_id' | 'last_message_id' | 'media_filenames'> = {
     name: chat.name,
     is_group: chat.isGroup,
     is_read_only: chat.isReadOnly,
@@ -352,10 +371,18 @@ export let syncChat = (chat: WChat & { groupMetadata?: GroupMetadata }) => {
       user_id,
       ...updates,
       last_message_id: null,
+      media_filenames: null,
     })
     chat_row = proxy.ws_chat[id]
   } else {
     Object.assign(chat_row, updates)
+  }
+  // refresh the denormalized media_filenames list for this chat
+  let media_filenames = getChatMediaFilenames(chat_row.id!)
+  if (chat_row.media_filenames !== media_filenames) {
+    chat_row.media_filenames = media_filenames
+      ? JSON.stringify(media_filenames)
+      : null
   }
   let groupMetadata = chat.groupMetadata
   if (groupMetadata) {
@@ -441,6 +468,7 @@ export function seedChatFromMessage(message: WMessage): number {
     is_muted: false,
     mute_expiration: 0,
     last_message_id: null,
+    media_filenames: null,
   })
   return id
 }
