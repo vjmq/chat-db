@@ -5,6 +5,7 @@ import type { EmailAccountConfig } from './source/email/adapter'
 let env_template = {
   WS_SESSION_DIR: '.wwebjs_auth',
   WS_CHAT_LIMIT: 3,
+  WS_CHAT_LIMIT_MODE: 'fair' as 'fair' | 'first',
   WS_MESSAGE_LIMIT: 32,
   TG_SESSION_DIR: '.tg_auth',
   TG_API_ID: NaN,

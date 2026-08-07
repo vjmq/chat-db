@@ -288,6 +288,16 @@ function applyChatLimit(chats: WChat[]): WChat[] {
   if (!Number.isFinite(chat_limit) || chat_limit <= 0) return chats
   let limit = Math.floor(chat_limit)
   if (limit >= chats.length) return chats
+  let mode = env.WS_CHAT_LIMIT_MODE === 'first' ? 'first' : 'fair'
+  if (mode === 'first') {
+    let picked = chats.slice(0, limit)
+    log.app(
+      `WS_CHAT_LIMIT active (mode=first): syncing chats at indices [${picked
+        .map((_, i) => i)
+        .join(',')}] of ${chats.length} (same chats every run)`,
+    )
+    return picked
+  }
   let scored = chats.map(chat => {
     let user_id = getUserId(chat.id)
     let chat_row = find(proxy.ws_chat, { user_id })
@@ -299,7 +309,7 @@ function applyChatLimit(chats: WChat[]): WChat[] {
   scored.sort((a, b) => a.existing - b.existing)
   let picked = scored.slice(0, limit)
   log.app(
-    `WS_CHAT_LIMIT active: syncing ${picked.length}/${chats.length} chats (skipped ${chats.length - picked.length}, prioritized by least-synced)`,
+    `WS_CHAT_LIMIT active (mode=fair): syncing ${picked.length}/${chats.length} chats (skipped ${chats.length - picked.length}, prioritized by least-synced)`,
   )
   return picked.map(p => p.chat)
 }
@@ -540,10 +550,12 @@ export async function syncMessageWithMedia(
     let media_row = row.media_id ? proxy.media[row.media_id] : null
     // decide whether to (re)download:
     //  - no media row exists yet
+    //  - filepath is missing/empty (e.g. row predates the media.filepath column)
     //  - filepath is recorded but the file is missing on disk
     //  - previous download failed (no downloaded_at, or download_error set)
     let needs_redownload =
       !media_row ||
+      !media_row.filepath ||
       (!!media_row.filepath && !existsSync(media_row.filepath)) ||
       !media_row.downloaded_at ||
       !!media_row.download_error
