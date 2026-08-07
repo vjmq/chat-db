@@ -9,8 +9,9 @@ import { GroupMetadata, MessageData } from '../../types'
 import { ProgressCli } from '@beenotung/tslib/progress-cli'
 import { sleep } from '@beenotung/tslib/async/wait'
 import { log } from './utils'
-import { mkdirSync, writeFileSync as fsWriteFile } from 'fs'
+import { existsSync, mkdirSync, writeFileSync as fsWriteFile } from 'fs'
 import { extname, join } from 'path'
+import { createHash } from 'crypto'
 
 let select_user_without_tel = db.prepare<
   void[],
@@ -535,14 +536,26 @@ export async function syncMessageWithMedia(
 ): Promise<number> {
   let message_id = syncMessage(message, chat_id)
   let row = proxy.ws_message[message_id]
-  if (message.hasMedia && !row.media_id) {
-    let media_id = await downloadMessageMedia({
-      ws_message_id: message_id,
-      api_id: message.id.id,
-      message,
-    })
-    if (media_id != null) {
-      update(proxy.ws_message, { id: message_id }, { media_id })
+  if (message.hasMedia) {
+    let media_row = row.media_id ? proxy.media[row.media_id] : null
+    // decide whether to (re)download:
+    //  - no media row exists yet
+    //  - filepath is recorded but the file is missing on disk
+    //  - previous download failed (no downloaded_at, or download_error set)
+    let needs_redownload =
+      !media_row ||
+      (!!media_row.filepath && !existsSync(media_row.filepath)) ||
+      !media_row.downloaded_at ||
+      !!media_row.download_error
+    if (needs_redownload) {
+      let media_id = await downloadMessageMedia({
+        ws_message_id: message_id,
+        api_id: message.id.id,
+        message,
+      })
+      if (media_id != null && row.media_id !== media_id) {
+        update(proxy.ws_message, { id: message_id }, { media_id })
+      }
     }
   }
   return message_id
@@ -565,6 +578,7 @@ export async function downloadMessageMedia(args: {
   let message = args.message
   if (!message.hasMedia) return null
   let filename = ''
+  let filepath: string | null = null
   let content_type = ''
   let bytes = 0
   let download_error: string | null = null
@@ -575,10 +589,15 @@ export async function downloadMessageMedia(args: {
     filename = has_ext
       ? media.filename!
       : `${args.api_id}${mimeExt(media.mimetype)}`
-    mkdirSync(DOWNLOAD_DIR, { recursive: true })
     let buf = Buffer.from(media.data, 'base64')
     bytes = buf.length
-    fsWriteFile(join(DOWNLOAD_DIR, filename), buf)
+    // on-disk filename = full sha256 of buffer + mime-derived extension
+    // db `filename` keeps the human-readable display name (original or api_id-based)
+    let hash = createHash('sha256').update(buf).digest('hex')
+    let shard_dir = join(DOWNLOAD_DIR, hash.slice(0, 2), hash.slice(2, 4))
+    mkdirSync(shard_dir, { recursive: true })
+    filepath = join(shard_dir, hash + mimeExt(media.mimetype))
+    fsWriteFile(filepath, buf)
   } catch (e) {
     download_error = String(e)
   }
@@ -588,6 +607,7 @@ export async function downloadMessageMedia(args: {
     {
       source: 'whatsapp',
       filename,
+      filepath,
       content_type,
       bytes,
       downloaded_at: download_error ? null : Date.now(),

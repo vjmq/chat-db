@@ -77,6 +77,7 @@ id integer PK
 ws_message_id integer unique NULL FK >0- ws_message.id
 source text
 filename text
+filepath text NULL
 content_type text
 bytes integer NULL
 downloaded_at integer NULL
