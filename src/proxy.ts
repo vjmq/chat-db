@@ -72,7 +72,7 @@ export type Media = {
   ws_message?: WsMessage
   source: string
   filename: string
-  filepath: null | string
+  hash: null | string
   content_type: string
   bytes: null | number
   downloaded_at: null | number

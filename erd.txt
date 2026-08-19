@@ -69,7 +69,7 @@ links json NULL
 poll_options json NULL
 poll_votes json NULL
 media_id integer NULL FK >0- media.id
-
+    # Plugin ID
 
 media
 -----
@@ -77,11 +77,13 @@ id integer PK
 ws_message_id integer unique NULL FK >0- ws_message.id
 source text
 filename text
-filepath text NULL
+hash text NULL
+    # sha256; on-disk path is res/downloads/<source>/<h0>/<h0:1..2>/<hash><ext>
 content_type text
 bytes integer NULL
 downloaded_at integer NULL
 download_error text NULL
+    # Transcript
 
 
 ws_group

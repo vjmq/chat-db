@@ -550,13 +550,16 @@ export async function syncMessageWithMedia(
     let media_row = row.media_id ? proxy.media[row.media_id] : null
     // decide whether to (re)download:
     //  - no media row exists yet
-    //  - filepath is missing/empty (e.g. row predates the media.filepath column)
-    //  - filepath is recorded but the file is missing on disk
+    //  - hash is missing/empty (e.g. row predates the media.hash column)
+    //  - hash is recorded but the file is missing on disk
     //  - previous download failed (no downloaded_at, or download_error set)
     let needs_redownload =
       !media_row ||
-      !media_row.filepath ||
-      (!!media_row.filepath && !existsSync(media_row.filepath)) ||
+      !media_row.hash ||
+      (!!media_row.hash &&
+        !existsSync(
+          resolveMediaPath(media_row.hash, media_row.content_type),
+        )) ||
       !media_row.downloaded_at ||
       !!media_row.download_error
     if (needs_redownload) {
@@ -582,6 +585,22 @@ function mimeExt(mime: string): string {
   return '.bin'
 }
 
+export function resolveMediaPath(
+  hash: string,
+  content_type: string,
+  source: string = 'whatsapp',
+): string {
+  let ext = mimeExt(content_type)
+  return join(
+    'res',
+    'downloads',
+    source,
+    hash.slice(0, 2),
+    hash.slice(2, 4),
+    hash + ext,
+  )
+}
+
 export async function downloadMessageMedia(args: {
   ws_message_id: number
   api_id: string
@@ -590,7 +609,7 @@ export async function downloadMessageMedia(args: {
   let message = args.message
   if (!message.hasMedia) return null
   let filename = ''
-  let filepath: string | null = null
+  let hash: string | null = null
   let content_type = ''
   let bytes = 0
   let download_error: string | null = null
@@ -604,12 +623,18 @@ export async function downloadMessageMedia(args: {
     let buf = Buffer.from(media.data, 'base64')
     bytes = buf.length
     // on-disk filename = full sha256 of buffer + mime-derived extension
-    // db `filename` keeps the human-readable display name (original or api_id-based)
-    let hash = createHash('sha256').update(buf).digest('hex')
-    let shard_dir = join(DOWNLOAD_DIR, hash.slice(0, 2), hash.slice(2, 4))
-    mkdirSync(shard_dir, { recursive: true })
-    filepath = join(shard_dir, hash + mimeExt(media.mimetype))
-    fsWriteFile(filepath, buf)
+    // db stores only the bare hash; the path is derived via resolveMediaPath
+    hash = createHash('sha256').update(buf).digest('hex')
+    let on_disk_path = join(
+      DOWNLOAD_DIR,
+      hash.slice(0, 2),
+      hash.slice(2, 4),
+      hash + mimeExt(media.mimetype),
+    )
+    mkdirSync(join(DOWNLOAD_DIR, hash.slice(0, 2), hash.slice(2, 4)), {
+      recursive: true,
+    })
+    fsWriteFile(on_disk_path, buf)
   } catch (e) {
     download_error = String(e)
   }
@@ -619,7 +644,7 @@ export async function downloadMessageMedia(args: {
     {
       source: 'whatsapp',
       filename,
-      filepath,
+      hash,
       content_type,
       bytes,
       downloaded_at: download_error ? null : Date.now(),
