@@ -64,6 +64,7 @@ export type WsMessage = {
   poll_votes: null | string // json
   media_id: null | number
   media?: Media
+  plugin_id: null | string
 }
 
 export type Media = {
@@ -77,6 +78,7 @@ export type Media = {
   bytes: null | number
   downloaded_at: null | number
   download_error: null | string
+  transcript: null | string
 }
 
 export type WsGroup = {

@@ -534,6 +534,7 @@ export let syncMessage = (
         data.pollVotesSnapshot?.pollVotes?.length > 0
           ? JSON.stringify(data.pollVotesSnapshot.pollVotes)
           : null,
+      plugin_id: null,
     },
   )
   return message_id
@@ -645,6 +646,7 @@ export async function downloadMessageMedia(args: {
       bytes,
       downloaded_at: download_error ? null : Date.now(),
       download_error,
+      transcript: null,
     },
   )
   return download_error ? null : media_id

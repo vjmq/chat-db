@@ -9,8 +9,9 @@ tasks:
 
 - [x] store hash instead of file path
 - [x] store without src folder (ie. whatsapp/telegram)
-- [ ] add transcript col to attachment table
-- [ ] plugin id to message table
+- [x] add transcript col to attachment table
+- [x] plugin id to message table
 
 2026-08-19 20:00 - 2026-08-19 21:25
-2026-08-19 21:25 -2026-08-19 22:01
+2026-08-19 21:25 - 2026-08-19 22:01
+2026-08-19 22:01 - 2026-08-19 22:37

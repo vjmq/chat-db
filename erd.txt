@@ -69,7 +69,7 @@ links json NULL
 poll_options json NULL
 poll_votes json NULL
 media_id integer NULL FK >0- media.id
-    # Plugin ID
+plugin_id text NULL
 
 media
 -----
@@ -83,7 +83,7 @@ content_type text
 bytes integer NULL
 downloaded_at integer NULL
 download_error text NULL
-    # Transcript
+transcript text NULL
 
 
 ws_group
