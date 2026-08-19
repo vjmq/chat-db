@@ -12,7 +12,7 @@ import { emailClients } from './source/email/cli'
 import { recordSent } from './source/email/sync'
 import { join as pathJoin } from 'path'
 
-const MEDIA_DIR = pathJoin('res', 'downloads', 'whatsapp')
+const MEDIA_DIR = pathJoin('res', 'downloads')
 
 let app = express()
 

@@ -1,19 +1,4 @@
-/**
- * find-media: resolve a media hash (or media row id) to its on-disk path.
- *
- * Usage:
- *   ts-node scripts/find-media.ts <hash-or-id> [...]
- *
- * Each argument may be either:
- *   - a 64-char sha256 hex string (resolves the file path and verifies it
- *     exists on disk; falls back to scanning the shard directory if the
- *     extension guess is wrong), or
- *   - an integer media row id (looks up `hash` and `content_type` in the
- *     `media` table and prints the resolved path).
- *
- * Exit code 0 if every input resolved to a file that exists on disk,
- * 1 otherwise.
- */
+// resolve media path from hash
 import { existsSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import { db } from '../src/db'
@@ -23,15 +8,12 @@ function isHash(s: string): boolean {
   return /^[0-9a-f]{64}$/i.test(s)
 }
 
-function resolveShardDir(
-  hash: string,
-  source: string = 'whatsapp',
-): string {
-  return join('res', 'downloads', source, hash.slice(0, 2), hash.slice(2, 4))
+function resolveShardDir(hash: string): string {
+  return join('res', 'downloads', hash.slice(0, 2), hash.slice(2, 4))
 }
 
-function findInShard(hash: string, source: string): string | null {
-  let dir = resolveShardDir(hash, source)
+function findInShard(hash: string): string | null {
+  let dir = resolveShardDir(hash)
   if (!existsSync(dir)) return null
   let prefix = hash
   let entries = readdirSync(dir)
@@ -46,26 +28,25 @@ function findInShard(hash: string, source: string): string | null {
 function resolvePath(
   hash: string,
   content_type: string | null,
-  source: string = 'whatsapp',
 ): string {
   // primary guess from content_type
   if (content_type) {
     let mime = content_type.split('/')[1].split(';')[0]
     let guess = join(
-      resolveShardDir(hash, source),
+      resolveShardDir(hash),
       `${hash}.${mime}`,
     )
     if (existsSync(guess)) return guess
   }
   // fallback: scan shard dir for any file starting with the hash prefix
-  let found = findInShard(hash, source)
+  let found = findInShard(hash)
   if (found) return found
   // last resort: return the mime-derived path even if missing, so callers
   // can see the expected location
   let fallbackExt = content_type
     ? `.${content_type.split('/')[1].split(';')[0]}`
     : '.bin'
-  return join(resolveShardDir(hash, source), hash + fallbackExt)
+  return join(resolveShardDir(hash), hash + fallbackExt)
 }
 
 function lookupMediaRow(id: number) {
@@ -116,12 +97,12 @@ function main() {
         all_ok = false
         continue
       }
-      let path = resolvePath(row.hash, row.content_type, row.source)
+      let path = resolvePath(row.hash, row.content_type)
       let exists = existsSync(path)
       if (!exists) all_ok = false
       console.log(
-        `${exists ? 'OK ' : 'MISS'} id=${id} hash=${row.hash} ` +
-          `ctype=${row.content_type} -> ${path}`,
+        `${exists ? 'OK ' : 'MISS'} id=${id} source=${row.source} ` +
+          `hash=${row.hash} ctype=${row.content_type} -> ${path}`,
       )
     }
   }

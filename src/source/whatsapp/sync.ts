@@ -576,7 +576,7 @@ export async function syncMessageWithMedia(
   return message_id
 }
 
-const DOWNLOAD_DIR = join('res', 'downloads', 'whatsapp')
+const DOWNLOAD_DIR = join('res', 'downloads')
 
 function mimeExt(mime: string): string {
   if (mime.startsWith('audio/')) return `.${mime.split('/')[1].split(';')[0]}`
@@ -585,16 +585,12 @@ function mimeExt(mime: string): string {
   return '.bin'
 }
 
-export function resolveMediaPath(
-  hash: string,
-  content_type: string,
-  source: string = 'whatsapp',
-): string {
+
+export function resolveMediaPath(hash: string, content_type: string): string {
   let ext = mimeExt(content_type)
   return join(
     'res',
     'downloads',
-    source,
     hash.slice(0, 2),
     hash.slice(2, 4),
     hash + ext,
